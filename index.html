@@ -9,588 +9,630 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{
-  width:100%;height:100%;background:#000;color:#fff;
-  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif;
-  overflow:hidden;touch-action:manipulation;-webkit-user-select:none;user-select:none;
-}
+html,body{width:100%;height:100%;background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif;overflow:hidden;touch-action:manipulation;-webkit-user-select:none;user-select:none}
 #app{width:100%;height:100%;position:relative}
-#orb-canvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1}
+canvas#orb{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1}
 
-#camera-wrap{
-  position:absolute;top:max(env(safe-area-inset-top),16px);right:16px;
-  width:90px;height:120px;border-radius:16px;overflow:hidden;
-  border:2px solid rgba(255,255,255,.15);z-index:20;opacity:0;
-  transition:opacity .6s ease;background:#111;
-}
-#camera-wrap.show{opacity:1}
-#cam{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+/* ── SETUP SCREEN ── */
+#setup{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;background:#000;padding:32px;transition:opacity .4s}
+#setup.gone{opacity:0;pointer-events:none}
+#setup .lock{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#1a1a2e,#0f3460);display:flex;align-items:center;justify-content:center;margin-bottom:20px;box-shadow:0 0 40px rgba(10,132,255,.2)}
+#setup .lock svg{width:36px;height:36px;fill:rgba(255,255,255,.7)}
+#setup h2{font-size:22px;font-weight:600;margin-bottom:6px}
+#setup .desc{font-size:13px;color:rgba(255,255,255,.45);margin-bottom:28px;text-align:center;line-height:1.5}
+#keyIn{width:100%;max-width:360px;height:46px;border-radius:12px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;padding:0 14px;font-size:14px;font-family:monospace;outline:none;-webkit-appearance:none;margin-bottom:12px}
+#keyIn:focus{border-color:rgba(10,132,255,.6)}
+#keyIn::placeholder{color:rgba(255,255,255,.25)}
+#keyMsg{font-size:12px;min-height:18px;margin-bottom:14px;text-align:center}
+#keyMsg.err{color:#ff453a}
+#keyMsg.ok{color:#34c759}
+#keyMsg.info{color:rgba(255,255,255,.5)}
+#keyBtn{width:100%;max-width:360px;height:46px;border-radius:12px;border:none;background:#0a84ff;color:#fff;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit}
+#keyBtn:active{opacity:.7}
+#keyBtn:disabled{opacity:.5}
+#keyClear{font-size:12px;color:rgba(10,132,255,.8);margin-top:14px;background:none;border:none;cursor:pointer;font-family:inherit;display:none}
 
-#hud{
-  position:absolute;top:calc(max(env(safe-area-inset-top),16px)+20px);
-  left:0;width:100%;text-align:center;z-index:10;pointer-events:none;
-}
-#hud h1{font-size:20px;font-weight:600;letter-spacing:-.3px;opacity:0;transition:opacity .5s}
-#hud h1.show{opacity:1}
-#hud p{font-size:13px;color:rgba(255,255,255,.5);margin-top:4px;opacity:0;transition:opacity .5s}
-#hud p.show{opacity:1}
+/* ── SPLASH (call start) ── */
+#splash{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:15;transition:opacity .5s}
+#splash.gone{opacity:0;pointer-events:none}
+.avatar{width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);display:flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 0 60px rgba(10,132,255,.15)}
+.avatar svg{width:48px;height:48px;fill:rgba(255,255,255,.7)}
+#splash .nm{font-size:26px;font-weight:600;margin-bottom:4px}
+#splash .sm{font-size:14px;color:rgba(255,255,255,.5);margin-bottom:48px}
+#splash .chkey{font-size:13px;color:rgba(255,255,255,.35);margin-top:24px;background:none;border:none;cursor:pointer;font-family:inherit}
 
-#dot{
-  position:absolute;top:calc(max(env(safe-area-inset-top),16px)+72px);
-  left:50%;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;
-  background:#34c759;z-index:10;opacity:0;transition:opacity .3s;
-  box-shadow:0 0 12px rgba(52,199,89,.3);
-}
+/* ── IN-CALL UI ── */
+#camera-box{position:absolute;top:max(env(safe-area-inset-top),16px);right:16px;width:90px;height:120px;border-radius:16px;overflow:hidden;border:2px solid rgba(255,255,255,.15);z-index:20;opacity:0;transition:opacity .6s;background:#111}
+#camera-box.show{opacity:1}
+#camvid{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+#hud{position:absolute;top:calc(max(env(safe-area-inset-top),16px)+20px);left:0;width:100%;text-align:center;z-index:10;pointer-events:none}
+#hud .name{font-size:20px;font-weight:600;opacity:0;transition:opacity .5s}
+#hud .name.show{opacity:1}
+#hud .stat{font-size:13px;color:rgba(255,255,255,.5);margin-top:4px;opacity:0;transition:opacity .5s}
+#hud .stat.show{opacity:1}
+#dot{position:absolute;top:calc(max(env(safe-area-inset-top),16px)+72px);left:50%;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;background:#34c759;z-index:10;opacity:0;transition:opacity .3s;box-shadow:0 0 12px rgba(52,199,89,.3)}
 #dot.on{opacity:1;animation:pdot 1.5s ease infinite}
 @keyframes pdot{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.4)}}
 
-#sub{
-  position:absolute;bottom:210px;left:20px;right:20px;
-  text-align:center;z-index:10;pointer-events:none;
-}
-#sub span{font-size:15px;color:rgba(255,255,255,.7);line-height:1.4}
+#subs{position:absolute;bottom:215px;left:20px;right:20px;text-align:center;z-index:10;pointer-events:none;font-size:15px;color:rgba(255,255,255,.7);line-height:1.4;min-height:40px}
 
-#err{
-  position:absolute;top:50%;left:16px;right:16px;transform:translateY(-50%);
-  text-align:center;z-index:25;pointer-events:none;display:none;
-}
-#err.show{display:block}
-#err .title{font-size:17px;font-weight:600;color:#ff453a;margin-bottom:8px}
-#err .detail{font-size:13px;color:rgba(255,255,255,.6);line-height:1.5}
-
-#typer{
-  position:absolute;bottom:155px;left:16px;right:16px;z-index:15;display:none;
-}
-#typer.show{display:flex;gap:8px}
-#typer input{
-  flex:1;height:42px;border-radius:21px;border:1px solid rgba(255,255,255,.2);
-  background:rgba(255,255,255,.08);color:#fff;padding:0 16px;font-size:15px;
-  font-family:inherit;outline:none;-webkit-appearance:none;
-}
+#typer{position:absolute;bottom:155px;left:16px;right:16px;z-index:15;display:none;gap:8px}
+#typer.show{display:flex}
+#typer input{flex:1;height:42px;border-radius:21px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;padding:0 16px;font-size:15px;font-family:inherit;outline:none;-webkit-appearance:none}
 #typer input::placeholder{color:rgba(255,255,255,.3)}
-#typer button{
-  width:42px;height:42px;border-radius:50%;border:none;
-  background:#0a84ff;color:#fff;font-size:20px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-}
+#typer button{width:42px;height:42px;border-radius:50%;border:none;background:#0a84ff;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 
-#bar{
-  position:absolute;bottom:max(env(safe-area-inset-bottom,0px),20px);
-  left:0;width:100%;display:flex;justify-content:center;
-  align-items:center;gap:48px;z-index:10;padding-bottom:16px;
-}
-.btn{
-  width:64px;height:64px;border-radius:50%;border:none;outline:none;
-  display:flex;align-items:center;justify-content:center;cursor:pointer;
-  transition:transform .15s;
-}
-.btn:active{transform:scale(.88)}
-.btn svg{width:28px;height:28px}
-#bCall{background:#34c759;box-shadow:0 0 30px rgba(52,199,89,.25)}
-#bEnd{background:#ff3b30;box-shadow:0 0 30px rgba(255,59,48,.25);display:none}
-#bMute{background:rgba(255,255,255,.1);display:none}
+#bar{position:absolute;bottom:max(env(safe-area-inset-bottom,0px),20px);left:0;width:100%;display:flex;justify-content:center;align-items:center;gap:48px;z-index:10;padding-bottom:16px}
+.cbtn{width:64px;height:64px;border-radius:50%;border:none;outline:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s}
+.cbtn:active{transform:scale(.88)}
+.cbtn svg{width:28px;height:28px}
+#btnCall{background:#34c759;box-shadow:0 0 30px rgba(52,199,89,.25)}
+#btnEnd{background:#ff3b30;box-shadow:0 0 30px rgba(255,59,48,.25);display:none}
+#btnMute{background:rgba(255,255,255,.1);display:none}
 
-#splash{
-  position:absolute;top:0;left:0;width:100%;height:100%;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  z-index:15;transition:opacity .5s;
-}
-#splash.gone{opacity:0;pointer-events:none}
-#splash .av{
-  width:100px;height:100px;border-radius:50%;
-  background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);
-  display:flex;align-items:center;justify-content:center;margin-bottom:16px;
-  box-shadow:0 0 60px rgba(10,132,255,.15);
-}
-#splash .av svg{width:48px;height:48px;fill:rgba(255,255,255,.7)}
-#splash .nm{font-size:26px;font-weight:600;margin-bottom:4px}
-#splash .sm{font-size:14px;color:rgba(255,255,255,.5);margin-bottom:48px}
-
-#log{
-  position:absolute;bottom:60px;left:8px;right:8px;
-  font-size:10px;color:#ff0;z-index:30;
-  max-height:120px;overflow-y:auto;pointer-events:none;
-  background:rgba(0,0,0,.7);padding:6px 8px;border-radius:6px;
-  font-family:monospace;display:none;line-height:1.4;
-}
-#log.show{display:block}
+#dbg{position:absolute;top:max(env(safe-area-inset-top),8px);left:8px;right:100px;font-size:10px;color:#ff0;z-index:30;max-height:100px;overflow-y:auto;pointer-events:none;background:rgba(0,0,0,.8);padding:4px 6px;border-radius:6px;font-family:monospace;line-height:1.4;display:none}
+#dbg.show{display:block}
 </style>
 </head>
 <body>
 <div id="app">
-  <canvas id="orb-canvas"></canvas>
+<canvas id="orb"></canvas>
 
-  <div id="camera-wrap"><video id="cam" autoplay playsinline muted></video></div>
+<!-- SETUP: paste key -->
+<div id="setup">
+  <div class="lock"><svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg></div>
+  <h2>Enter API Key</h2>
+  <p class="desc">Your key stays on this device only.<br>Get one at console.anthropic.com &rarr; API Keys</p>
+  <input type="text" id="keyIn" placeholder="sk-ant-api03-..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  <div id="keyMsg" class="info"></div>
+  <button id="keyBtn">Connect</button>
+  <button id="keyClear">Clear saved key</button>
+</div>
 
-  <div id="hud"><h1 id="name">Claude</h1><p id="stat">FaceTime Audio</p></div>
-  <div id="dot"></div>
+<!-- SPLASH: pre-call -->
+<div id="splash" class="gone">
+  <div class="avatar"><svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg></div>
+  <div class="nm">Claude</div>
+  <div class="sm">AI Assistant</div>
+  <button class="cbtn" id="btnCall" style="width:72px;height:72px"><svg viewBox="0 0 24 24" fill="#fff"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.58a1 1 0 01-.25 1.01l-2.2 2.2z"/></svg></button>
+  <button class="chkey" id="chKeyBtn">Change API Key</button>
+</div>
 
-  <div id="sub"><span id="subtext"></span></div>
-
-  <div id="err">
-    <div class="title" id="errTitle"></div>
-    <div class="detail" id="errDetail"></div>
-  </div>
-
-  <div id="typer">
-    <input type="text" id="tin" placeholder="Type here…" autocomplete="off" autocorrect="off">
-    <button id="tsend">↑</button>
-  </div>
-
-  <div id="splash">
-    <div class="av"><svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg></div>
-    <div class="nm">Claude</div>
-    <div class="sm">AI Assistant</div>
-    <button class="btn" id="bCall" style="width:72px;height:72px">
-      <svg viewBox="0 0 24 24" fill="#fff"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.58a1 1 0 01-.25 1.01l-2.2 2.2z"/></svg>
-    </button>
-  </div>
-
-  <div id="bar">
-    <button class="btn" id="bMute"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3zm-1 7v-2h2v2h-2zm5-10h2a7 7 0 01-14 0h2a5 5 0 0010 0z"/></svg></button>
-    <button class="btn" id="bEnd"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85a1 1 0 01-.7.28 1 1 0 01-.71-.3L.29 13.08a1 1 0 010-1.42C3.55 8.38 7.56 6.5 12 6.5s8.45 1.88 11.71 5.16a1 1 0 010 1.42l-2.48 2.48a1 1 0 01-.7.29c-.27 0-.52-.1-.7-.29a11.27 11.27 0 00-2.67-1.85.99.99 0 01-.56-.9v-3.1A15.9 15.9 0 0012 9z"/></svg></button>
-  </div>
-
-  <div id="log"></div>
+<!-- IN-CALL -->
+<div id="camera-box"><video id="camvid" autoplay playsinline muted></video></div>
+<div id="hud"><div class="name" id="hName">Claude</div><div class="stat" id="hStat"></div></div>
+<div id="dot"></div>
+<div id="subs"></div>
+<div id="typer"><input type="text" id="tin" placeholder="Type here…" autocomplete="off"><button id="tsend">&uarr;</button></div>
+<div id="bar">
+  <button class="cbtn" id="btnMute"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3zm-1 7v-2h2v2h-2zm5-10h2a7 7 0 01-14 0h2a5 5 0 0010 0z"/></svg></button>
+  <button class="cbtn" id="btnEnd"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85a1 1 0 01-.7.28 1 1 0 01-.71-.3L.29 13.08a1 1 0 010-1.42C3.55 8.38 7.56 6.5 12 6.5s8.45 1.88 11.71 5.16a1 1 0 010 1.42l-2.48 2.48a1 1 0 01-.7.29c-.27 0-.52-.1-.7-.29a11.27 11.27 0 00-2.67-1.85.99.99 0 01-.56-.9v-3.1A15.9 15.9 0 0012 9z"/></svg></button>
+</div>
+<div id="dbg"></div>
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════
-// PASTE YOUR API KEY HERE
-// ═══════════════════════════════════════════════════════
-var API_KEY = "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";
+(function(){
+"use strict";
 
-// Models to try in order (fallback chain)
+// ═════════════════════════════════════════════════
+// CONFIG
+// ═════════════════════════════════════════════════
 var MODELS = [
   "claude-sonnet-4-20250514",
   "claude-3-5-sonnet-20241022",
   "claude-3-haiku-20240307"
 ];
-var currentModelIdx = 0;
+var modelIdx = 0;
+var SYS = "You are a real person on a live phone call. Speak casually, messy, short, slightly chaotic, like a teenager. Use filler words (like, uh, bro, wait, nah, yo, man, lowkey). Keep responses 1-2 sentences max. Sometimes trail off with ... or interrupt yourself with dashes. Never use asterisks or emojis or stage directions. Never describe actions. Just talk like a real person on a call. React to what they say, joke around.";
+var API_KEY = "";
+var API_URL = "https://api.anthropic.com/v1/messages";
 
-var SYSTEM_PROMPT = "You are a real person on a live phone call. Speak casually, messy, short, slightly chaotic, like a teenager. Use filler words (like, uh, bro, wait, nah, yo, man, lowkey). Keep responses 1-2 sentences max. Sometimes trail off with ... or interrupt yourself with dashes. Never use asterisks or emojis or stage directions. Never describe actions. Just talk like a real person would on a call. React to what they say, ask follow-ups, joke around. Be natural and chill.";
+// ═════════════════════════════════════════════════
+// STATE
+// ═════════════════════════════════════════════════
+var inCall=false, speaking=false, muted=false, ttsOK=false;
+var convo=[], timerVal=0, timerRef=null, audioLvl=0, orbState='idle';
 
-// ─── STATE ──────────────────────────────────────
-var inCall = false, isSpeaking = false, isMuted = false, ttsUnlocked = false;
-var micStream = null, sttOK = false;
-var history = [];
-var timerSec = 0, timerInt = null;
-var audioLevel = 0, orbMode = 'idle'; // idle|listening|speaking
+// ═════════════════════════════════════════════════
+// DOM REFS
+// ═════════════════════════════════════════════════
+var setupDiv  = document.getElementById('setup');
+var keyIn     = document.getElementById('keyIn');
+var keyMsg    = document.getElementById('keyMsg');
+var keyBtn    = document.getElementById('keyBtn');
+var keyClear  = document.getElementById('keyClear');
+var splashDiv = document.getElementById('splash');
+var btnCall   = document.getElementById('btnCall');
+var chKeyBtn  = document.getElementById('chKeyBtn');
+var btnEnd    = document.getElementById('btnEnd');
+var btnMute   = document.getElementById('btnMute');
+var hName     = document.getElementById('hName');
+var hStat     = document.getElementById('hStat');
+var dotEl     = document.getElementById('dot');
+var subsEl    = document.getElementById('subs');
+var typerDiv  = document.getElementById('typer');
+var tinEl     = document.getElementById('tin');
+var tsendEl   = document.getElementById('tsend');
+var camBox    = document.getElementById('camera-box');
+var camVid    = document.getElementById('camvid');
+var dbgEl     = document.getElementById('dbg');
+var orbCanvas = document.getElementById('orb');
 
-// ─── DOM ────────────────────────────────────────
-var $ = function(id){ return document.getElementById(id); };
-var splash=$('splash'), bCall=$('bCall'), bEnd=$('bEnd'), bMute=$('bMute');
-var hudName=$('name'), hudStat=$('stat'), subtext=$('subtext');
-var camWrap=$('camera-wrap'), camVid=$('cam');
-var dot=$('dot'), errBox=$('err'), errTitle=$('errTitle'), errDetail=$('errDetail');
-var typer=$('typer'), tin=$('tin'), tsend=$('tsend');
-var logEl=$('log'), orbCanvas=$('orb-canvas');
-
-// ─── LOGGING (yellow box at bottom, tap 5x top-left to toggle) ─
-var logLines = [];
-function L(msg) {
-  console.log('[Call]', msg);
-  logLines.push(msg);
-  if (logLines.length > 20) logLines.shift();
-  logEl.innerHTML = logLines.join('<br>');
-  logEl.scrollTop = logEl.scrollHeight;
+// ═════════════════════════════════════════════════
+// DEBUG LOG (tap top-left 5x to show)
+// ═════════════════════════════════════════════════
+var dbgLines=[];
+function D(m){
+  console.log('[AI]',m);
+  dbgLines.push(m);
+  if(dbgLines.length>30)dbgLines.shift();
+  dbgEl.innerHTML=dbgLines.join('<br>');
+  dbgEl.scrollTop=99999;
 }
-var tapCount = 0;
-document.addEventListener('click', function(e) {
-  if (e.clientX < 60 && e.clientY < 60) {
-    tapCount++;
-    if (tapCount >= 5) { logEl.classList.toggle('show'); tapCount = 0; }
-    setTimeout(function(){ tapCount = 0; }, 2000);
-  }
+var taps=0;
+document.addEventListener('click',function(e){
+  if(e.clientX<60&&e.clientY<60){taps++;if(taps>=5){dbgEl.classList.toggle('show');taps=0;}setTimeout(function(){taps=0;},2000);}
 });
 
-// ─── THREE.JS ORB ───────────────────────────────
-var scene, cam3, rend, pts, pVel;
-function initOrb() {
-  scene = new THREE.Scene();
-  cam3 = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 100);
-  cam3.position.z = 4;
-  rend = new THREE.WebGLRenderer({canvas:orbCanvas, alpha:true, antialias:true});
-  rend.setSize(window.innerWidth, window.innerHeight);
-  rend.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+// ═════════════════════════════════════════════════
+// API KEY SETUP
+// ═════════════════════════════════════════════════
+try{
+  var saved=localStorage.getItem('aicall_key');
+  if(saved&&saved.indexOf('sk-ant')===0){
+    API_KEY=saved;
+    keyIn.value=saved.slice(0,14)+'...'+saved.slice(-6);
+    keyMsg.textContent='Key loaded from device';
+    keyMsg.className='ok';
+    keyClear.style.display='inline-block';
+  }
+}catch(e){}
 
-  var N = 2400, geo = new THREE.BufferGeometry();
-  var pos = new Float32Array(N*3);
-  pVel = [];
-  for (var i=0; i<N; i++) {
-    var th=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1), r=0.88+Math.random()*0.12;
-    pos[i*3]=r*Math.sin(ph)*Math.cos(th);
-    pos[i*3+1]=r*Math.sin(ph)*Math.sin(th);
-    pos[i*3+2]=r*Math.cos(ph);
-    pVel.push({off:Math.random()*Math.PI*2});
+keyBtn.addEventListener('click',function(){
+  var v=keyIn.value.trim();
+  // If showing masked key, use saved
+  if(v.indexOf('...')>-1&&API_KEY&&API_KEY.indexOf('sk-ant')===0){
+    goToSplash();
+    return;
   }
-  geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
-  var mat = new THREE.PointsMaterial({color:0x4a9eff,size:0.025,transparent:true,opacity:0.8,blending:THREE.AdditiveBlending,depthWrite:false});
-  pts = new THREE.Points(geo, mat);
-  scene.add(pts);
-  scene.add(new THREE.Mesh(new THREE.SphereGeometry(0.6,32,32), new THREE.MeshBasicMaterial({color:0x0a84ff,transparent:true,opacity:0.04})));
-  tick();
-}
-var breath=0;
-function tick() {
-  requestAnimationFrame(tick);
-  var t=Date.now()*0.001;
-  breath+=0.015;
-  var ts=1.0;
-  if(orbMode==='speaking') ts=1+audioLevel*0.45;
-  else if(orbMode==='listening') ts=1+Math.sin(t*3)*0.04;
-  else ts=1+Math.sin(breath)*0.03;
-  var s=pts.scale.x+(ts-pts.scale.x)*0.12;
-  pts.scale.set(s,s,s);
-  var rs=orbMode==='speaking'?0.008:0.003;
-  pts.rotation.y+=rs; pts.rotation.x+=rs*0.3;
-  var pa=pts.geometry.attributes.position.array;
-  for(var i=0;i<pVel.length;i++){
-    var idx=i*3,ox=pa[idx],oy=pa[idx+1],oz=pa[idx+2];
-    var len=Math.sqrt(ox*ox+oy*oy+oz*oz);
-    if(!len)continue;
-    var nx=ox/len,ny=oy/len,nz=oz/len;
-    var tr=0.9;
-    if(orbMode==='speaking') tr=0.9+Math.sin(t*8+pVel[i].off)*audioLevel*0.2;
-    var nr=len+(tr-len)*0.08;
-    pa[idx]=nx*nr;pa[idx+1]=ny*nr;pa[idx+2]=nz*nr;
+  if(!v||v.indexOf('sk-ant')!==0){
+    keyMsg.textContent='Key must start with sk-ant...';
+    keyMsg.className='err';
+    return;
   }
-  pts.geometry.attributes.position.needsUpdate=true;
-  if(orbMode==='speaking') pts.material.color.lerp(new THREE.Color(0x5ac8fa),0.05);
-  else if(orbMode==='listening') pts.material.color.lerp(new THREE.Color(0x34c759),0.03);
-  else pts.material.color.lerp(new THREE.Color(0x4a9eff),0.03);
-  rend.render(scene,cam3);
-}
-window.addEventListener('resize',function(){
-  if(!cam3||!rend)return;
-  cam3.aspect=window.innerWidth/window.innerHeight;
-  cam3.updateProjectionMatrix();
-  rend.setSize(window.innerWidth,window.innerHeight);
+  testKey(v);
 });
 
-// ─── AUDIO ──────────────────────────────────────
-var actx;
-function ensureAudio(){
-  if(!actx) actx=new(window.AudioContext||window.webkitAudioContext)();
-  if(actx.state==='suspended') actx.resume();
-}
-function playRing(cb){
-  ensureAudio();
-  var o1=actx.createOscillator(),o2=actx.createOscillator(),g=actx.createGain();
-  o1.type='sine';o2.type='sine';o1.frequency.value=440;o2.frequency.value=480;
-  o1.connect(g);o2.connect(g);g.connect(actx.destination);
-  var t=actx.currentTime;
-  g.gain.setValueAtTime(0.08,t);g.gain.setValueAtTime(0,t+0.35);
-  g.gain.setValueAtTime(0.08,t+0.55);g.gain.setValueAtTime(0,t+0.9);
-  o1.start(t);o2.start(t);o1.stop(t+1.2);o2.stop(t+1.2);
-  setTimeout(cb,1200);
+keyIn.addEventListener('keydown',function(e){if(e.key==='Enter')keyBtn.click();});
+
+keyClear.addEventListener('click',function(){
+  try{localStorage.removeItem('aicall_key');}catch(e){}
+  API_KEY='';keyIn.value='';
+  keyMsg.textContent='Cleared';keyMsg.className='info';
+  keyClear.style.display='none';
+});
+
+chKeyBtn.addEventListener('click',function(){
+  splashDiv.classList.add('gone');
+  setupDiv.classList.remove('gone');
+  keyIn.value='';keyMsg.textContent='';
+  keyClear.style.display=API_KEY?'inline-block':'none';
+});
+
+function goToSplash(){
+  setupDiv.classList.add('gone');
+  splashDiv.classList.remove('gone');
 }
 
-// ─── MIC PERMISSION ─────────────────────────────
-function getMic(){
-  return new Promise(function(ok){
-    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){L('No getUserMedia');ok(false);return;}
-    navigator.mediaDevices.getUserMedia({audio:true}).then(function(s){
-      micStream=s; L('Mic granted'); ok(true);
-    }).catch(function(e){L('Mic denied:'+e.message);ok(false);});
+function testKey(key){
+  keyMsg.textContent='Testing key...';keyMsg.className='info';
+  keyBtn.disabled=true;keyBtn.textContent='Checking...';
+  D('Testing key '+key.slice(0,14)+'...');
+
+  // Try each model until one works or we confirm the key is bad
+  tryModelForKey(key, 0);
+}
+
+function tryModelForKey(key, idx){
+  if(idx>=MODELS.length){
+    keyBtn.disabled=false;keyBtn.textContent='Connect';
+    keyMsg.textContent='Key works but no models available on your plan';keyMsg.className='err';
+    return;
+  }
+  var model=MODELS[idx];
+  D('Try model: '+model);
+
+  fetch(API_URL,{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':key,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({model:model,max_tokens:20,messages:[{role:'user',content:'say hey'}]})
+  })
+  .then(function(res){
+    D('Status: '+res.status+' for '+model);
+    return res.json().then(function(j){return{s:res.status,d:j};});
+  })
+  .then(function(r){
+    var d=r.d, s=r.s;
+
+    // SUCCESS — got a response with content
+    if(d.content&&d.content.length>0){
+      D('SUCCESS with '+model);
+      modelIdx=idx;
+      API_KEY=key;
+      try{localStorage.setItem('aicall_key',key);}catch(e){}
+      keyBtn.disabled=false;keyBtn.textContent='Connect';
+      keyMsg.textContent='Connected! Model: '+model;keyMsg.className='ok';
+      setTimeout(goToSplash,600);
+      return;
+    }
+
+    var msg=(d.error&&d.error.message)?d.error.message:JSON.stringify(d);
+
+    // AUTH FAIL — key is bad
+    if(s===401||msg.toLowerCase().indexOf('auth')>-1||msg.toLowerCase().indexOf('invalid')>-1){
+      keyBtn.disabled=false;keyBtn.textContent='Connect';
+      keyMsg.textContent='Invalid API key. Create a new one at console.anthropic.com';keyMsg.className='err';
+      D('AUTH FAIL: '+msg);
+      return;
+    }
+
+    // BILLING — no credits
+    if(s===402||msg.toLowerCase().indexOf('credit')>-1||msg.toLowerCase().indexOf('billing')>-1){
+      keyBtn.disabled=false;keyBtn.textContent='Connect';
+      keyMsg.textContent='No credits. Add funds at console.anthropic.com/settings/billing';keyMsg.className='err';
+      D('BILLING: '+msg);
+      return;
+    }
+
+    // MODEL NOT FOUND — try next model
+    if(s===404||msg.toLowerCase().indexOf('not found')>-1||msg.toLowerCase().indexOf('not_found')>-1||msg.toLowerCase().indexOf('does not exist')>-1){
+      D('Model '+model+' not available, trying next...');
+      tryModelForKey(key, idx+1);
+      return;
+    }
+
+    // RATE LIMIT or OVERLOADED — key is valid
+    if(s===429||s===529||s>=500){
+      D('Rate limited or overloaded — key is valid');
+      modelIdx=idx;
+      API_KEY=key;
+      try{localStorage.setItem('aicall_key',key);}catch(e){}
+      keyBtn.disabled=false;keyBtn.textContent='Connect';
+      keyMsg.textContent='Connected! (server busy but key valid)';keyMsg.className='ok';
+      setTimeout(goToSplash,600);
+      return;
+    }
+
+    // OTHER ERROR
+    keyBtn.disabled=false;keyBtn.textContent='Connect';
+    keyMsg.textContent='Error: '+msg;keyMsg.className='err';
+    D('OTHER: '+msg);
+  })
+  .catch(function(err){
+    keyBtn.disabled=false;keyBtn.textContent='Connect';
+    keyMsg.textContent='Network error: '+err.message;keyMsg.className='err';
+    D('NETWORK: '+err.message);
   });
 }
 
-// ─── TTS ────────────────────────────────────────
+// ═════════════════════════════════════════════════
+// SEND MESSAGE TO AI (during call)
+// ═════════════════════════════════════════════════
+function sendToAI(userText){
+  convo.push({role:'user',content:userText});
+  if(convo.length>20)convo=convo.slice(-16);
+  hStat.textContent='thinking...';
+  subsEl.textContent='...';subsEl.style.opacity='0.5';
+
+  callModel(modelIdx);
+
+  function callModel(idx){
+    if(idx>=MODELS.length){
+      subsEl.textContent='All models failed';subsEl.style.opacity='1';
+      sayText("yo something's really broken right now",afterSpeak);
+      return;
+    }
+    var model=MODELS[idx];
+    D('Call '+model);
+
+    fetch(API_URL,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':API_KEY,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({model:model,max_tokens:200,system:SYS,messages:convo})
+    })
+    .then(function(res){
+      D('HTTP '+res.status);
+      return res.json().then(function(j){return{s:res.status,d:j};});
+    })
+    .then(function(r){
+      if(!inCall)return;
+
+      // Success
+      if(r.d.content&&r.d.content.length>0){
+        var txt='';
+        for(var i=0;i<r.d.content.length;i++){
+          if(r.d.content[i].type==='text')txt+=r.d.content[i].text;
+        }
+        if(txt){
+          modelIdx=idx;
+          D('AI('+MODELS[idx]+'): '+txt.slice(0,60));
+          convo.push({role:'assistant',content:txt});
+          hStat.textContent=fmtT(timerVal);
+          var delay=400+Math.random()*800;
+          setTimeout(function(){sayText(txt,afterSpeak);},delay);
+          return;
+        }
+      }
+
+      var msg=(r.d.error&&r.d.error.message)?r.d.error.message:'Unknown';
+
+      // Model not found — try next
+      if(r.s===404||msg.indexOf('not found')>-1||msg.indexOf('not_found')>-1){
+        D('Fallback from '+model);
+        callModel(idx+1);
+        return;
+      }
+
+      // Other error — show it
+      D('ERR: '+msg);
+      subsEl.textContent='Error: '+msg;subsEl.style.opacity='1';
+      hStat.textContent='Error';
+      sayText("something glitched, my bad",afterSpeak);
+    })
+    .catch(function(err){
+      D('NET ERR: '+err.message);
+      subsEl.textContent='Network error';subsEl.style.opacity='1';
+      sayText("we're breaking up bro",afterSpeak);
+    });
+  }
+}
+
+function afterSpeak(){
+  if(!inCall)return;
+  orbState='idle';audioLvl=0;
+  subsEl.style.opacity='0.3';
+  dotEl.classList.add('on');
+}
+
+// ═════════════════════════════════════════════════
+// TTS
+// ═════════════════════════════════════════════════
 function unlockTTS(){
-  if(ttsUnlocked||!window.speechSynthesis)return;
+  if(ttsOK||!window.speechSynthesis)return;
   var u=new SpeechSynthesisUtterance('');u.volume=0;u.rate=10;
-  window.speechSynthesis.speak(u);
-  ttsUnlocked=true;L('TTS unlocked');
+  window.speechSynthesis.speak(u);ttsOK=true;D('TTS unlocked');
 }
 var voices=[];
-function loadVoices(){if(window.speechSynthesis)voices=window.speechSynthesis.getVoices();}
-if(window.speechSynthesis){loadVoices();window.speechSynthesis.onvoiceschanged=loadVoices;}
+function loadV(){if(window.speechSynthesis)voices=window.speechSynthesis.getVoices();}
+if(window.speechSynthesis){loadV();window.speechSynthesis.onvoiceschanged=loadV;}
 
-function pickVoice(){
-  if(!voices.length)voices=window.speechSynthesis.getVoices();
-  var want=['samantha','daniel','karen','alex','rishi','aaron'];
+function pickV(){
+  if(!voices.length&&window.speechSynthesis)voices=window.speechSynthesis.getVoices();
+  var want=['samantha','daniel','karen','alex','aaron','rishi'];
   for(var w=0;w<want.length;w++)for(var v=0;v<voices.length;v++)
     if(voices[v].name.toLowerCase().indexOf(want[w])>-1)return voices[v];
   for(var v=0;v<voices.length;v++)if(voices[v].lang.indexOf('en')===0)return voices[v];
   return null;
 }
 
-function stopSpeaking(){
-  isSpeaking=false;orbMode='idle';audioLevel=0;
-  if(window.speechSynthesis)window.speechSynthesis.cancel();
-}
+function stopTTS(){speaking=false;orbState='idle';audioLvl=0;if(window.speechSynthesis)window.speechSynthesis.cancel();}
 
-function speak(text, done){
+function sayText(text,done){
   if(!text||!window.speechSynthesis){if(done)done();return;}
-  var chunks=text.match(/[^.!?,;…—–\-]+[.!?,;…—–\-]*/g)||[text];
-  var cl=[];for(var i=0;i<chunks.length;i++){var c=chunks[i].trim();if(c)cl.push(c);}
+  var parts=text.match(/[^.!?,;]+[.!?,;]*/g)||[text];
+  var cl=[];for(var i=0;i<parts.length;i++){var c=parts[i].trim();if(c)cl.push(c);}
   if(!cl.length)cl=[text];
 
-  isSpeaking=true;orbMode='speaking';
-  subtext.textContent=text;subtext.parentElement.style.opacity='0.7';
+  speaking=true;orbState='speaking';
+  subsEl.textContent=text;subsEl.style.opacity='0.7';
 
   var ci=0;
   function go(){
-    if(ci>=cl.length||!isSpeaking||!inCall){
-      isSpeaking=false;orbMode='idle';audioLevel=0;if(done)done();return;
-    }
+    if(ci>=cl.length||!speaking||!inCall){speaking=false;orbState='idle';audioLvl=0;if(done)done();return;}
     var u=new SpeechSynthesisUtterance(cl[ci++]);
-    u.rate=0.92+Math.random()*0.16;
-    u.pitch=0.9+Math.random()*0.15;
-    u.volume=1;
-    var v=pickVoice();if(v)u.voice=v;
-    u.onstart=function(){audioLevel=0.4+Math.random()*0.3;};
-    u.onboundary=function(){audioLevel=0.25+Math.random()*0.5;};
-    u.onend=function(){audioLevel=0;setTimeout(go,60+Math.random()*180);};
-    u.onerror=function(){audioLevel=0;go();};
+    u.rate=0.92+Math.random()*0.16;u.pitch=0.9+Math.random()*0.15;u.volume=1;
+    var v=pickV();if(v)u.voice=v;
+    u.onstart=function(){audioLvl=0.4+Math.random()*0.3;};
+    u.onboundary=function(){audioLvl=0.25+Math.random()*0.5;};
+    u.onend=function(){audioLvl=0;setTimeout(go,60+Math.random()*180);};
+    u.onerror=function(){audioLvl=0;go();};
     window.speechSynthesis.speak(u);
   }
   go();
 }
-// iOS keep-alive
-setInterval(function(){if(window.speechSynthesis&&isSpeaking&&window.speechSynthesis.paused)window.speechSynthesis.resume();},200);
+setInterval(function(){if(window.speechSynthesis&&speaking&&window.speechSynthesis.paused)window.speechSynthesis.resume();},200);
 
-// ─── SPEECH RECOGNITION ─────────────────────────
-var rec=null, recRestarting=false, finalText='', silTimer=null;
-
-function initSTT(){
+// ═════════════════════════════════════════════════
+// SPEECH RECOGNITION
+// ═════════════════════════════════════════════════
+var rec=null,recBusy=false,finalTxt='',silTmr=null;
+function initRec(){
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){L('No SpeechRecognition');return;}
+  if(!SR){D('No STT');return;}
   rec=new SR();rec.continuous=true;rec.interimResults=true;rec.lang='en-US';
-
-  rec.onstart=function(){L('STT listening');sttOK=true;dot.classList.add('on');};
+  rec.onstart=function(){D('STT on');dotEl.classList.add('on');};
   rec.onresult=function(e){
-    if(!inCall||isMuted)return;
-    var interim='';finalText='';
+    if(!inCall||muted)return;
+    var interim='';finalTxt='';
     for(var i=e.resultIndex;i<e.results.length;i++){
-      if(e.results[i].isFinal)finalText+=e.results[i][0].transcript;
+      if(e.results[i].isFinal)finalTxt+=e.results[i][0].transcript;
       else interim+=e.results[i][0].transcript;
     }
-    var d=finalText||interim;
+    var d=finalTxt||interim;
     if(d.trim()){
-      subtext.textContent='🎤 '+d;subtext.parentElement.style.opacity='1';
-      orbMode='listening';
-      if(isSpeaking&&d.trim().split(/\s+/).length>=2)stopSpeaking();
+      subsEl.textContent=d;subsEl.style.opacity='1';orbState='listening';
+      if(speaking&&d.trim().split(/\s+/).length>=2)stopTTS();
     }
-    clearTimeout(silTimer);
-    if(finalText.trim()){
-      silTimer=setTimeout(function(){
-        if(finalText.trim()&&!isSpeaking&&inCall){userSaid(finalText.trim());finalText='';}
+    clearTimeout(silTmr);
+    if(finalTxt.trim()){
+      silTmr=setTimeout(function(){
+        if(finalTxt.trim()&&!speaking&&inCall){userInput(finalTxt.trim());finalTxt='';}
       },1800);
     }
   };
   rec.onend=function(){
-    dot.classList.remove('on');
-    if(inCall&&!recRestarting){
-      recRestarting=true;
-      setTimeout(function(){recRestarting=false;if(inCall)try{rec.start();}catch(e){}},150);
-    }
+    dotEl.classList.remove('on');
+    if(inCall&&!recBusy){recBusy=true;setTimeout(function(){recBusy=false;if(inCall)try{rec.start();}catch(e){}},150);}
   };
   rec.onerror=function(e){
-    L('STT err:'+e.error);
-    if(e.error==='not-allowed'){sttOK=false;typer.classList.add('show');}
-    if(e.error!=='aborted'&&e.error!=='no-speech'&&inCall)
-      setTimeout(function(){if(inCall)try{rec.start();}catch(ex){}},500);
+    D('STT err:'+e.error);
+    if(e.error==='not-allowed')typerDiv.classList.add('show');
+    if(e.error!=='aborted'&&e.error!=='no-speech'&&inCall)setTimeout(function(){if(inCall)try{rec.start();}catch(x){}},500);
   };
 }
+function startRec(){if(!rec)initRec();if(!rec){typerDiv.classList.add('show');return;}try{rec.start();}catch(e){typerDiv.classList.add('show');}}
+function stopRec(){if(rec)try{rec.stop();}catch(e){}clearTimeout(silTmr);dotEl.classList.remove('on');}
 
-function startSTT(){if(!rec)initSTT();if(!rec){typer.classList.add('show');return;}try{rec.start();}catch(e){L('STT start fail');typer.classList.add('show');}}
-function stopSTT(){if(rec)try{rec.stop();}catch(e){}clearTimeout(silTimer);dot.classList.remove('on');}
+// ═════════════════════════════════════════════════
+// TEXT INPUT
+// ═════════════════════════════════════════════════
+tsendEl.addEventListener('click',function(){var v=tinEl.value.trim();if(v&&inCall&&!speaking){userInput(v);tinEl.value='';}});
+tinEl.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();tsendEl.click();}});
 
-// ─── TEXT INPUT ─────────────────────────────────
-tsend.onclick=function(){var v=tin.value.trim();if(v&&inCall&&!isSpeaking){userSaid(v);tin.value='';}};
-tin.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();tsend.click();}};
-
-// ─── SEND USER INPUT TO AI ──────────────────────
-function userSaid(text){
-  L('You: '+text.substring(0,50));
-  dot.classList.remove('on');orbMode='idle';
-  subtext.textContent='🎤 '+text;
-  callAI(text);
+function userInput(text){
+  D('You: '+text.slice(0,50));
+  dotEl.classList.remove('on');orbState='idle';
+  subsEl.textContent=text;
+  sendToAI(text);
 }
 
-// ═══════════════════════════════════════════════════════
-// THE AI: Claude API call with model fallback
-// ═══════════════════════════════════════════════════════
-function callAI(userText){
-  history.push({role:'user',content:userText});
-  if(history.length>20)history=history.slice(-16);
-
-  hudStat.textContent='thinking…';
-  subtext.textContent='…';subtext.parentElement.style.opacity='0.5';
-
-  var model = MODELS[currentModelIdx] || MODELS[0];
-  L('→ API call ('+model+')');
-
-  var body = JSON.stringify({
-    model: model,
-    max_tokens: 200,
-    system: SYSTEM_PROMPT,
-    messages: history
-  });
-
-  fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': API_KEY,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: body
-  })
-  .then(function(res){
-    L('← Status '+res.status);
-    if(!res.ok){
-      return res.text().then(function(t){
-        var parsed;
-        try{parsed=JSON.parse(t);}catch(e){parsed={error:{message:t}};}
-        throw parsed;
-      });
-    }
-    return res.json();
-  })
-  .then(function(data){
-    if(!inCall)return;
-    errBox.classList.remove('show');
-
-    var reply='';
-    if(data.content){
-      for(var i=0;i<data.content.length;i++){
-        if(data.content[i].type==='text')reply+=data.content[i].text;
-      }
-    }
-    if(!reply)reply="bro what? say that again";
-
-    L('AI: '+reply.substring(0,60));
-    history.push({role:'assistant',content:reply});
-    hudStat.textContent=fmtTime(timerSec);
-
-    // Natural delay then speak
-    var delay=400+Math.random()*800;
-    var r=Math.random();
-    if(r<0.08) setTimeout(function(){speak("wait— "+reply,afterAI);},200);
-    else if(r<0.14) setTimeout(function(){speak("uhh, "+reply,afterAI);},300);
-    else setTimeout(function(){speak(reply,afterAI);},delay);
-  })
-  .catch(function(err){
-    L('API FAIL: '+JSON.stringify(err).substring(0,200));
-
-    var msg = '';
-    if(err && err.error && err.error.message) msg = err.error.message;
-    else if(err && err.message) msg = err.message;
-    else msg = JSON.stringify(err);
-
-    // If model not found, try next model
-    if(msg.indexOf('not found')>-1 || msg.indexOf('not available')>-1 || msg.indexOf('does not exist')>-1){
-      if(currentModelIdx < MODELS.length-1){
-        currentModelIdx++;
-        L('Trying fallback model: '+MODELS[currentModelIdx]);
-        // Remove the user message we just added since we'll re-add it
-        history.pop();
-        callAI(userText);
-        return;
-      }
-    }
-
-    // Show error on screen
-    errTitle.textContent='API Error';
-    errDetail.textContent=msg+'\n\nModel tried: '+MODELS[currentModelIdx]+'\nCheck your API key at console.anthropic.com';
-    errBox.classList.add('show');
-    hudStat.textContent='Error';
-
-    speak("sorry, something's not connecting", afterAI);
-  });
-}
-
-function afterAI(){
-  if(!inCall)return;
-  orbMode='idle';audioLevel=0;
-  subtext.parentElement.style.opacity='0.3';
-  dot.classList.add('on');
-}
-
-// ─── CAMERA ─────────────────────────────────────
-function startCam(){
-  if(!navigator.mediaDevices)return;
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:180,height:240},audio:false})
-    .then(function(s){camVid.srcObject=s;camWrap.classList.add('show');})
-    .catch(function(){L('No camera');});
-}
-
-// ─── CALL FLOW ──────────────────────────────────
-function startCall(){
+// ═════════════════════════════════════════════════
+// AUDIO / RINGTONE / MIC
+// ═════════════════════════════════════════════════
+var actx;
+function ensureAudio(){if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();}
+function ring(cb){
   ensureAudio();
-  unlockTTS();
+  var o1=actx.createOscillator(),o2=actx.createOscillator(),g=actx.createGain();
+  o1.type='sine';o2.type='sine';o1.frequency.value=440;o2.frequency.value=480;
+  o1.connect(g);o2.connect(g);g.connect(actx.destination);
+  var t=actx.currentTime;
+  g.gain.setValueAtTime(0.08,t);g.gain.setValueAtTime(0,t+0.35);g.gain.setValueAtTime(0.08,t+0.55);g.gain.setValueAtTime(0,t+0.9);
+  o1.start(t);o2.start(t);o1.stop(t+1.2);o2.stop(t+1.2);
+  setTimeout(cb,1200);
+}
+function getMic(){
+  return new Promise(function(ok){
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ok(false);return;}
+    navigator.mediaDevices.getUserMedia({audio:true}).then(function(s){D('Mic OK');ok(s);}).catch(function(){D('No mic');ok(false);});
+  });
+}
 
-  hudStat.textContent='Requesting mic…';
-  hudStat.classList.add('show');
+// ═════════════════════════════════════════════════
+// CALL FLOW
+// ═════════════════════════════════════════════════
+btnCall.addEventListener('click',function(){
+  ensureAudio();unlockTTS();
+  hStat.textContent='Requesting mic...';hStat.classList.add('show');
 
-  getMic().then(function(ok){
-    inCall=true;history=[];currentModelIdx=0;
-    splash.classList.add('gone');
-    hudName.classList.add('show');hudStat.classList.add('show');
-    hudStat.textContent='Connecting…';
-    bEnd.style.display='flex';bMute.style.display='flex';bCall.style.display='none';
-    errBox.classList.remove('show');
+  getMic().then(function(stream){
+    inCall=true;convo=[];
+    splashDiv.classList.add('gone');
+    hName.classList.add('show');hStat.classList.add('show');
+    hStat.textContent='Connecting...';
+    btnEnd.style.display='flex';btnMute.style.display='flex';btnCall.style.display='none';
+    typerDiv.classList.add('show');
 
-    startCam();
+    // Camera
+    if(navigator.mediaDevices){
+      navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:180,height:240},audio:false})
+        .then(function(s){camVid.srcObject=s;camBox.classList.add('show');}).catch(function(){});
+    }
 
-    // Always show text input as fallback
-    typer.classList.add('show');
-
-    playRing(function(){
+    ring(function(){
       if(!inCall)return;
-      hudStat.textContent='0:00';
-      timerSec=0;
-      timerInt=setInterval(function(){timerSec++;if(!isSpeaking)hudStat.textContent=fmtTime(timerSec);},1000);
+      hStat.textContent='0:00';
+      timerVal=0;timerRef=setInterval(function(){timerVal++;if(!speaking)hStat.textContent=fmtT(timerVal);},1000);
 
-      // Start listening
-      if(ok) startSTT();
+      if(stream)startRec();
 
-      // AI says hello
-      var opener="yo—what's up bro… can you hear me?";
-      history.push({role:'assistant',content:opener});
-
-      setTimeout(function(){
-        if(!inCall)return;
-        speak(opener,function(){
-          orbMode='idle';dot.classList.add('on');
-          L('Ready — speak or type');
-        });
-      },500);
+      var opener="yo—what's up bro... can you hear me?";
+      convo.push({role:'assistant',content:opener});
+      setTimeout(function(){if(inCall)sayText(opener,function(){orbState='idle';dotEl.classList.add('on');D('Ready');});},500);
     });
   });
-}
+});
 
-function endCall(){
-  inCall=false;stopSpeaking();stopSTT();clearInterval(timerInt);
+btnEnd.addEventListener('click',function(){
+  inCall=false;stopTTS();stopRec();clearInterval(timerRef);
   if(camVid.srcObject){camVid.srcObject.getTracks().forEach(function(t){t.stop();});camVid.srcObject=null;}
-  if(micStream){micStream.getTracks().forEach(function(t){t.stop();});micStream=null;}
-  camWrap.classList.remove('show');hudName.classList.remove('show');hudStat.classList.remove('show');
-  subtext.textContent='';dot.classList.remove('on');typer.classList.remove('show');
-  errBox.classList.remove('show');
-  bEnd.style.display='none';bMute.style.display='none';
-  setTimeout(function(){splash.classList.remove('gone');bCall.style.display='flex';timerSec=0;history=[];},300);
-}
+  camBox.classList.remove('show');hName.classList.remove('show');hStat.classList.remove('show');
+  subsEl.textContent='';dotEl.classList.remove('on');typerDiv.classList.remove('show');
+  btnEnd.style.display='none';btnMute.style.display='none';
+  setTimeout(function(){splashDiv.classList.remove('gone');btnCall.style.display='flex';timerVal=0;convo=[];},300);
+});
 
-function toggleMute(){
-  isMuted=!isMuted;
-  bMute.style.background=isMuted?'rgba(255,255,255,.25)':'rgba(255,255,255,.1)';
-  if(isMuted)dot.classList.remove('on');else dot.classList.add('on');
-}
+btnMute.addEventListener('click',function(){
+  muted=!muted;
+  btnMute.style.background=muted?'rgba(255,255,255,.25)':'rgba(255,255,255,.1)';
+  if(muted)dotEl.classList.remove('on');else dotEl.classList.add('on');
+});
 
-function fmtTime(s){var m=Math.floor(s/60),sec=s%60;return m+':'+(sec<10?'0':'')+sec;}
+function fmtT(s){var m=Math.floor(s/60),sec=s%60;return m+':'+(sec<10?'0':'')+sec;}
 
-// ─── EVENTS ─────────────────────────────────────
-bCall.onclick=startCall;
-bEnd.onclick=endCall;
-bMute.onclick=toggleMute;
+// ═════════════════════════════════════════════════
+// THREE.JS ORB
+// ═════════════════════════════════════════════════
+var scene3,cam3,rend3,pts3,pv3;
+(function initOrb(){
+  scene3=new THREE.Scene();
+  cam3=new THREE.PerspectiveCamera(50,window.innerWidth/window.innerHeight,0.1,100);
+  cam3.position.z=4;
+  rend3=new THREE.WebGLRenderer({canvas:orbCanvas,alpha:true,antialias:true});
+  rend3.setSize(window.innerWidth,window.innerHeight);
+  rend3.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  var N=2400,geo=new THREE.BufferGeometry(),pos=new Float32Array(N*3);pv3=[];
+  for(var i=0;i<N;i++){
+    var th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1),r=.88+Math.random()*.12;
+    pos[i*3]=r*Math.sin(ph)*Math.cos(th);pos[i*3+1]=r*Math.sin(ph)*Math.sin(th);pos[i*3+2]=r*Math.cos(ph);
+    pv3.push({off:Math.random()*Math.PI*2});
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  pts3=new THREE.Points(geo,new THREE.PointsMaterial({color:0x4a9eff,size:.025,transparent:true,opacity:.8,blending:THREE.AdditiveBlending,depthWrite:false}));
+  scene3.add(pts3);
+  scene3.add(new THREE.Mesh(new THREE.SphereGeometry(.6,32,32),new THREE.MeshBasicMaterial({color:0x0a84ff,transparent:true,opacity:.04})));
 
-// ─── INIT ───────────────────────────────────────
-initOrb();
-L('App ready. Tap Call to start.');
+  var br=0;
+  function tick(){
+    requestAnimationFrame(tick);
+    var t=Date.now()*.001;br+=.015;
+    var ts=orbState==='speaking'?1+audioLvl*.45:orbState==='listening'?1+Math.sin(t*3)*.04:1+Math.sin(br)*.03;
+    var s=pts3.scale.x+(ts-pts3.scale.x)*.12;pts3.scale.set(s,s,s);
+    var rs=orbState==='speaking'?.008:.003;pts3.rotation.y+=rs;pts3.rotation.x+=rs*.3;
+    var pa=pts3.geometry.attributes.position.array;
+    for(var i=0;i<pv3.length;i++){
+      var idx=i*3,ox=pa[idx],oy=pa[idx+1],oz=pa[idx+2];
+      var len=Math.sqrt(ox*ox+oy*oy+oz*oz);if(!len)continue;
+      var nx=ox/len,ny=oy/len,nz=oz/len;
+      var tr=.9;if(orbState==='speaking')tr=.9+Math.sin(t*8+pv3[i].off)*audioLvl*.2;
+      var nr=len+(tr-len)*.08;
+      pa[idx]=nx*nr;pa[idx+1]=ny*nr;pa[idx+2]=nz*nr;
+    }
+    pts3.geometry.attributes.position.needsUpdate=true;
+    if(orbState==='speaking')pts3.material.color.lerp(new THREE.Color(0x5ac8fa),.05);
+    else if(orbState==='listening')pts3.material.color.lerp(new THREE.Color(0x34c759),.03);
+    else pts3.material.color.lerp(new THREE.Color(0x4a9eff),.03);
+    rend3.render(scene3,cam3);
+  }
+  tick();
+})();
+window.addEventListener('resize',function(){
+  if(cam3&&rend3){cam3.aspect=window.innerWidth/window.innerHeight;cam3.updateProjectionMatrix();rend3.setSize(window.innerWidth,window.innerHeight);}
+});
+
+D('App ready');
+})();
 </script>
 </body>
 </html>
