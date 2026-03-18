@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -22,17 +21,17 @@ html,body{
 #orb-canvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1}
 
 #camera-wrap{
-position:absolute;top:max(env(safe-area-inset-top),16px);right:16px;
-width:90px;height:120px;border-radius:16px;overflow:hidden;
-border:2px solid rgba(255,255,255,0.15);z-index:20;opacity:0;
-transition:opacity .6s ease;background:#111;
+  position:absolute;top:max(env(safe-area-inset-top),16px);right:16px;
+  width:90px;height:120px;border-radius:16px;overflow:hidden;
+  border:2px solid rgba(255,255,255,0.15);z-index:20;opacity:0;
+  transition:opacity .6s ease;background:#111;
 }
 #camera-wrap.visible{opacity:1}
 #camera-preview{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
 
 #status-area{
-position:absolute;top:calc(max(env(safe-area-inset-top),16px) + 20px);
-left:0;width:100%;text-align:center;z-index:10;pointer-events:none;
+  position:absolute;top:calc(max(env(safe-area-inset-top),16px) + 20px);
+  left:0;width:100%;text-align:center;z-index:10;pointer-events:none;
 }
 #caller-name{font-size:20px;font-weight:600;letter-spacing:-.3px;opacity:0;transition:opacity .5s ease}
 #caller-name.visible{opacity:1}
@@ -40,57 +39,57 @@ left:0;width:100%;text-align:center;z-index:10;pointer-events:none;
 #call-status.visible{opacity:1}
 
 #listening-dot{
-position:absolute;top:calc(max(env(safe-area-inset-top),16px) + 70px);
-left:50%;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;
-background:#34c759;z-index:10;opacity:0;transition:opacity .3s ease;
-box-shadow:0 0 12px rgba(52,199,89,.3);
+  position:absolute;top:calc(max(env(safe-area-inset-top),16px) + 70px);
+  left:50%;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;
+  background:#34c759;z-index:10;opacity:0;transition:opacity .3s ease;
+  box-shadow:0 0 12px rgba(52,199,89,.3);
 }
 #listening-dot.active{opacity:1;animation:pulse-dot 1.5s ease infinite}
 @keyframes pulse-dot{
-0%,100%{transform:translateX(-50%) scale(1);opacity:.8}
-50%{transform:translateX(-50%) scale(1.4);opacity:1}
+  0%,100%{transform:translateX(-50%) scale(1);opacity:.8}
+  50%{transform:translateX(-50%) scale(1.4);opacity:1}
 }
 
 #transcript-area{
-position:absolute;bottom:220px;left:20px;right:20px;
-text-align:center;z-index:10;pointer-events:none;
+  position:absolute;bottom:220px;left:20px;right:20px;
+  text-align:center;z-index:10;pointer-events:none;
 }
 #transcript-text{
-font-size:15px;font-weight:400;color:rgba(255,255,255,.7);
-line-height:1.4;max-height:80px;overflow:hidden;transition:opacity .3s ease;
+  font-size:15px;font-weight:400;color:rgba(255,255,255,.7);
+  line-height:1.4;max-height:80px;overflow:hidden;transition:opacity .3s ease;
 }
 
 /* Text input fallback */
 #text-input-wrap{
-position:absolute;bottom:160px;left:16px;right:16px;
-z-index:15;display:none;
+  position:absolute;bottom:160px;left:16px;right:16px;
+  z-index:15;display:none;
 }
 #text-input-wrap.visible{display:flex}
 #text-input{
-flex:1;height:40px;border-radius:20px;border:1px solid rgba(255,255,255,.2);
-background:rgba(255,255,255,.08);color:#fff;padding:0 16px;font-size:15px;
-font-family:inherit;outline:none;
--webkit-appearance:none;
+  flex:1;height:40px;border-radius:20px;border:1px solid rgba(255,255,255,.2);
+  background:rgba(255,255,255,.08);color:#fff;padding:0 16px;font-size:15px;
+  font-family:inherit;outline:none;
+  -webkit-appearance:none;
 }
 #text-input::placeholder{color:rgba(255,255,255,.35)}
 #text-send{
-width:40px;height:40px;border-radius:50%;border:none;
-background:#0a84ff;color:#fff;margin-left:8px;
-display:flex;align-items:center;justify-content:center;cursor:pointer;
-font-size:18px;
+  width:40px;height:40px;border-radius:50%;border:none;
+  background:#0a84ff;color:#fff;margin-left:8px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-size:18px;
 }
 
 /* Controls */
 #controls{
-position:absolute;bottom:max(env(safe-area-inset-bottom,0px),24px);
-left:0;width:100%;display:flex;justify-content:center;
-align-items:center;gap:48px;z-index:10;padding-bottom:16px;
+  position:absolute;bottom:max(env(safe-area-inset-bottom,0px),24px);
+  left:0;width:100%;display:flex;justify-content:center;
+  align-items:center;gap:48px;z-index:10;padding-bottom:16px;
 }
 .ctrl-btn{
-width:64px;height:64px;border-radius:50%;border:none;outline:none;
-display:flex;align-items:center;justify-content:center;cursor:pointer;
-transition:transform .2s ease,box-shadow .3s ease;
--webkit-tap-highlight-color:transparent;
+  width:64px;height:64px;border-radius:50%;border:none;outline:none;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  transition:transform .2s ease,box-shadow .3s ease;
+  -webkit-tap-highlight-color:transparent;
 }
 .ctrl-btn:active{transform:scale(.9)}
 .ctrl-btn svg{width:28px;height:28px}
@@ -100,16 +99,16 @@ transition:transform .2s ease,box-shadow .3s ease;
 
 /* Start screen */
 #start-screen{
-position:absolute;top:0;left:0;width:100%;height:100%;
-display:flex;flex-direction:column;align-items:center;justify-content:center;
-z-index:15;transition:opacity .5s ease;
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:15;transition:opacity .5s ease;
 }
 #start-screen.hidden{opacity:0;pointer-events:none}
 #start-avatar{
-width:100px;height:100px;border-radius:50%;
-background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);
-display:flex;align-items:center;justify-content:center;margin-bottom:16px;
-box-shadow:0 0 60px rgba(10,132,255,.15);
+  width:100px;height:100px;border-radius:50%;
+  background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);
+  display:flex;align-items:center;justify-content:center;margin-bottom:16px;
+  box-shadow:0 0 60px rgba(10,132,255,.15);
 }
 #start-avatar svg{width:48px;height:48px;fill:rgba(255,255,255,.7)}
 #start-name{font-size:26px;font-weight:600;letter-spacing:-.5px;margin-bottom:4px}
@@ -117,15 +116,14 @@ box-shadow:0 0 60px rgba(10,132,255,.15);
 
 /* Debug log */
 #debug{
-position:absolute;top:max(env(safe-area-inset-top),16px);left:8px;
-font-size:11px;color:rgba(255,255,255,.7);z-index:30;
-max-width:240px;word-wrap:break-word;pointer-events:none;
-background:rgba(0,0,0,.5);padding:4px 8px;border-radius:6px;
-display:block;
+  position:absolute;top:max(env(safe-area-inset-top),16px);left:8px;
+  font-size:11px;color:rgba(255,255,255,.7);z-index:30;
+  max-width:240px;word-wrap:break-word;pointer-events:none;
+  background:rgba(0,0,0,.5);padding:4px 8px;border-radius:6px;
+  display:block;
 }
 #debug.hidden{display:none}
 </style>
-
 </head>
 <body>
 <div id="app">
@@ -174,7 +172,7 @@ display:block;
 </div>
 
 <script>
-var API_KEY = "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";
+var API_KEY = "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";
 
 // ─── STATE ──────────────────────────────────────
 var state = {
@@ -859,6 +857,5 @@ document.addEventListener('click', function(e) {
   }
 });
 </script>
-
 </body>
 </html>
