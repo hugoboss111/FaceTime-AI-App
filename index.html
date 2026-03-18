@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>FaceTime</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --bg:#05050d;
+  --glass:rgba(255,255,255,0.07);
+  --gb:rgba(255,255,255,0.13);
+  --green:#34c759;
+  --red:#ff3b30;
+  --blue:#0a84ff;
+  --dim:rgba(255,255,255,0.45);
+  --blur:blur(18px);
+}
+html,body { width:100%;height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,sans-serif;overflow:hidden;color:#fff;touch-action:none; }
+.screen { position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .45s ease; }
+.screen.hidden { opacity:0;pointer-events:none; }
+
+/* START */
+#s0 { background:radial-gradient(ellipse 80% 65% at 50% 60%,#0c1828 0%,#05050d 100%);z-index:10; }
+.av { width:92px;height:92px;border-radius:50%;background:linear-gradient(135deg,#1a3a5e,#0c1828);border:2px solid var(–gb);display:flex;align-items:center;justify-content:center;font-size:42px;margin-bottom:16px;animation:ap 3s ease-in-out infinite; }
+@keyframes ap{0%,100%{box-shadow:0 0 40px rgba(52,199,89,.15),0 8px 32px rgba(0,0,0,.5)}50%{box-shadow:0 0 70px rgba(52,199,89,.35),0 8px 32px rgba(0,0,0,.5)}}
+.nm { font-size:28px;font-weight:600;letter-spacing:-.4px;margin-bottom:6px; }
+.sub0 { font-size:14px;color:var(–dim);margin-bottom:56px; }
+.cbtn { width:72px;height:72px;border-radius:50%;background:var(–green);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;animation:rp 2.2s ease-out infinite;transition:transform .15s; }
+.cbtn:active{transform:scale(.9)}
+@keyframes rp{0%{box-shadow:0 0 0 0 rgba(52,199,89,.5)}70%{box-shadow:0 0 0 24px rgba(52,199,89,0)}100%{box-shadow:0 0 0 0 rgba(52,199,89,0)}}
+.cbtn svg{width:30px;height:30px;fill:white}
+.clbl { margin-top:10px;font-size:13px;color:var(–dim); }
+
+/* CONNECTING */
+#conn { position:fixed;inset:0;z-index:30;background:radial-gradient(ellipse 80% 65% at 50% 55%,#0c1828 0%,#05050d 100%);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;transition:opacity .55s; }
+#conn.fo{opacity:0;pointer-events:none}
+.cwrap{position:relative;display:flex;align-items:center;justify-content:center}
+.rings{position:absolute;inset:0;border-radius:50%}
+.ri{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(10,132,255,.3);animation:re 2s ease-out infinite}
+.ri:nth-child(2){animation-delay:.55s}.ri:nth-child(3){animation-delay:1.1s}
+@keyframes re{0%{transform:scale(1);opacity:.65}100%{transform:scale(2.9);opacity:0}}
+.cav{width:108px;height:108px;border-radius:50%;background:linear-gradient(135deg,#1a3a5e,#0c1828);border:2.5px solid var(–gb);display:flex;align-items:center;justify-content:center;font-size:48px;z-index:1;animation:cp 1.5s ease-in-out infinite}
+@keyframes cp{0%,100%{box-shadow:0 0 40px rgba(10,132,255,.2)}50%{box-shadow:0 0 80px rgba(10,132,255,.45)}}
+.cnm{font-size:26px;font-weight:600}
+.cst{font-size:15px;color:var(–dim)}
+.dots{display:flex;gap:7px;margin-top:4px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(–dim);animation:db 1.3s ease-in-out infinite}
+.dot:nth-child(2){animation-delay:.22s}.dot:nth-child(3){animation-delay:.44s}
+@keyframes db{0%,80%,100%{transform:scale(.65);opacity:.35}40%{transform:scale(1);opacity:1}}
+
+/* CALL */
+#s1{background:#04040b;z-index:5}
+#cv{position:fixed;inset:0;z-index:0}
+.topbar{position:fixed;top:0;left:0;right:0;padding:env(safe-area-inset-top,48px) 18px 0;display:flex;align-items:flex-start;justify-content:space-between;z-index:20}
+.cinfo{display:flex;flex-direction:column;gap:3px;padding-top:2px}
+.cnname{font-size:17px;font-weight:600;letter-spacing:-.3px}
+.ctimer{font-size:13px;color:var(–dim);font-variant-numeric:tabular-nums}
+.camprev{width:86px;height:116px;border-radius:14px;overflow:hidden;border:1.5px solid rgba(255,255,255,.2);box-shadow:0 4px 20px rgba(0,0,0,.7);background:#0a0a0a}
+.camprev video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+
+/* Sub */
+.subbar{position:fixed;bottom:200px;left:20px;right:20px;z-index:20;text-align:center;pointer-events:none}
+.subtext{display:inline-block;background:rgba(0,0,0,.6);backdrop-filter:var(–blur);-webkit-backdrop-filter:var(–blur);border-radius:12px;padding:8px 16px;font-size:15px;line-height:1.4;color:rgba(255,255,255,.92);opacity:0;transform:translateY(5px);transition:opacity .3s,transform .3s}
+.subtext.show{opacity:1;transform:translateY(0)}
+.stlbl{position:fixed;bottom:178px;left:0;right:0;text-align:center;z-index:20;font-size:12px;color:var(–dim);letter-spacing:.3px;pointer-events:none;opacity:0;transition:opacity .3s}
+.stlbl.show{opacity:1}
+
+/* Controls */
+.ctrls{position:fixed;bottom:0;left:0;right:0;padding:20px 36px calc(env(safe-area-inset-bottom,24px)+20px);display:flex;align-items:center;justify-content:space-around;z-index:20}
+.cw{display:flex;flex-direction:column;align-items:center;gap:7px}
+.cl{font-size:11.5px;color:rgba(255,255,255,.42);letter-spacing:.1px}
+.btn{width:58px;height:58px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .14s,background .2s;-webkit-user-select:none;user-select:none}
+.btn:active{transform:scale(.86)}
+.bg{background:var(–glass);backdrop-filter:var(–blur);-webkit-backdrop-filter:var(–blur);border:1px solid var(–gb)}
+.bg.on{background:rgba(255,255,255,.88)}
+.bg.on svg{fill:#000!important}
+.bend{width:68px;height:68px;background:var(–red);box-shadow:0 4px 22px rgba(255,59,48,.4)}
+.bend svg{width:26px;height:26px;fill:white;transform:rotate(135deg)}
+.btn svg{width:22px;height:22px}
+
+/* MIC */
+.mbtn{width:58px;height:58px;border-radius:50%;border:none;cursor:pointer;background:var(–glass);backdrop-filter:var(–blur);-webkit-backdrop-filter:var(–blur);border:1px solid var(–gb);display:flex;align-items:center;justify-content:center;transition:transform .14s,background .2s,box-shadow .2s;-webkit-user-select:none;user-select:none}
+.mbtn:active{transform:scale(.88)}
+.mbtn.rec{background:rgba(255,59,48,.85);box-shadow:0 0 0 0 rgba(255,59,48,.5);animation:mr 1s ease-out infinite;border-color:transparent}
+.mbtn.muted{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.08);opacity:.6}
+@keyframes mr{0%{box-shadow:0 0 0 0 rgba(255,59,48,.55)}70%{box-shadow:0 0 0 14px rgba(255,59,48,0)}100%{box-shadow:0 0 0 0 rgba(255,59,48,0)}}
+.mbtn svg{width:22px;height:22px}
+
+/* Ended */
+#end{position:fixed;inset:0;z-index:50;background:rgba(4,4,11,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;opacity:0;pointer-events:none;transition:opacity .4s}
+#end.show{opacity:1;pointer-events:all}
+.eicon{font-size:52px;margin-bottom:4px}
+.etitle{font-size:22px;font-weight:600}
+.esub{font-size:15px;color:var(–dim)}
+.ebtn{margin-top:28px;padding:14px 48px;border-radius:50px;background:var(–glass);backdrop-filter:var(–blur);-webkit-backdrop-filter:var(–blur);border:1px solid var(–gb);color:white;font-size:16px;font-weight:500;cursor:pointer;transition:transform .15s}
+.ebtn:active{transform:scale(.95)}
+
+/* Debug - triple tap top-left to show */
+#dbg{position:fixed;top:0;left:0;right:0;max-height:180px;overflow-y:auto;background:rgba(0,0,0,.9);font-size:10px;padding:6px 8px;z-index:200;color:#0f0;font-family:monospace;display:none;white-space:pre-wrap;word-break:break-all}
+</style>
+
+</head>
+<body>
+
+<!-- START -->
+
+<div class="screen" id="s0">
+  <div class="av">🧑‍💻</div>
+  <div class="nm">Alex</div>
+  <div class="sub0">FaceTime</div>
+  <div style="display:flex;flex-direction:column;align-items:center">
+    <button class="cbtn" id="callBtn">
+      <svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
+    </button>
+    <div class="clbl">FaceTime</div>
+  </div>
+</div>
+
+<!-- CONNECTING -->
+
+<div id="conn">
+  <div class="cwrap">
+    <div class="rings"><div class="ri"></div><div class="ri"></div><div class="ri"></div></div>
+    <div class="cav">🧑‍💻</div>
+  </div>
+  <div class="cnm">Alex</div>
+  <div class="cst">Connecting…</div>
+  <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+</div>
+
+<!-- CALL -->
+
+<div class="screen hidden" id="s1">
+  <canvas id="cv"></canvas>
+  <div class="topbar">
+    <div class="cinfo">
+      <div class="cnname">Alex</div>
+      <div class="ctimer" id="timerEl">00:00</div>
+    </div>
+    <div class="camprev"><video id="camVid" autoplay muted playsinline></video></div>
+  </div>
+  <div class="subbar"><div class="subtext" id="subEl"></div></div>
+  <div class="stlbl" id="stEl"></div>
+  <div class="ctrls">
+    <div class="cw">
+      <button class="btn bg" id="muteBtn" onclick="toggleMute()">
+        <svg id="muteIco" viewBox="0 0 24 24" fill="white"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/></svg>
+      </button>
+      <div class="cl">mute</div>
+    </div>
+    <div class="cw">
+      <button class="btn bend" onclick="endCall()">
+        <svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
+      </button>
+      <div class="cl">end</div>
+    </div>
+    <div class="cw">
+      <button class="mbtn" id="micBtn" onclick="tapMic()">
+        <svg id="micIco" viewBox="0 0 24 24" fill="white"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/></svg>
+      </button>
+      <div class="cl" id="micLbl">speak</div>
+    </div>
+  </div>
+</div>
+
+<!-- ENDED -->
+
+<div id="end">
+  <div class="eicon">📵</div>
+  <div class="etitle">Call Ended</div>
+  <div class="esub" id="endDur">0:00</div>
+  <button class="ebtn" onclick="location.reload()">Close</button>
+</div>
+
+<!-- Debug: triple-tap top-left corner to open -->
+
+<div id="dbg"></div>
+<div style="position:fixed;top:0;left:0;width:60px;height:60px;z-index:999;opacity:0" id="dbgTap" onclick="dbgTapFn()"></div>
+
+<script>
+var API_KEY = "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";
+
+// ─── DEBUG ───────────────────────────────────────────
+var dbgEl = document.getElementById('dbg');
+var dbgCount = 0, dbgT = null;
+function dbgTapFn() {
+  dbgCount++;
+  clearTimeout(dbgT);
+  dbgT = setTimeout(function(){ dbgCount=0; }, 700);
+  if (dbgCount >= 3) { dbgEl.style.display = dbgEl.style.display==='none'?'block':'none'; dbgCount=0; }
+}
+function log() {
+  var msg = Array.from(arguments).join(' ');
+  console.log(msg);
+  var d = document.createElement('div');
+  d.textContent = new Date().toLocaleTimeString('en-US',{hour12:false}) + ' ' + msg;
+  dbgEl.appendChild(d);
+  if (dbgEl.children.length > 80) dbgEl.removeChild(dbgEl.children[0]);
+  dbgEl.scrollTop = dbgEl.scrollHeight;
+}
+
+// ─── STATE ────────────────────────────────────────────
+var callActive = false, muted = false;
+var callStart = null, timerInt = null;
+var aiSpeaking = false, recognizing = false;
+var history = [];
+var orbState = 'idle', orbVol = 0;
+var synthVoice = null;
+var micStream = null;
+var ttsUnlocked = false;
+
+// ─── VOICE LOADING ────────────────────────────────────
+function loadVoices() {
+  var vv = speechSynthesis.getVoices();
+  if (vv.length) pickVoice(vv);
+}
+speechSynthesis.onvoiceschanged = loadVoices;
+loadVoices();
+
+function pickVoice(vv) {
+  var want = ['Alex','Aaron','Daniel','Fred','Oliver','Tom','Rishi','Bruce','Junior'];
+  for (var i=0; i<want.length; i++) {
+    var v = vv.find(function(x){ return x.name===want[i]; });
+    if (v) { synthVoice=v; log('Voice selected:',v.name); return; }
+  }
+  // Fallback: any en-US
+  var v2 = vv.find(function(x){ return x.lang==='en-US'; });
+  if (!v2) v2 = vv.find(function(x){ return x.lang.startsWith('en'); });
+  if (v2) { synthVoice=v2; log('Voice fallback:',v2.name); }
+  else log('No voice found');
+}
+
+// ─── TTS UNLOCK (must call from user tap) ────────────
+function unlockTTS() {
+  if (ttsUnlocked) return;
+  ttsUnlocked = true;
+  var u = new SpeechSynthesisUtterance(' ');
+  u.volume = 0; u.rate = 10;
+  speechSynthesis.speak(u);
+  log('TTS unlocked');
+}
+
+// ─── THREE.JS ORB ─────────────────────────────────────
+var scene, camera, renderer, pts, clock3;
+var N = 1600, origPos = new Float32Array(N*3);
+
+function initThree() {
+  clock3 = new THREE.Clock();
+  var canvas = document.getElementById('cv');
+  renderer = new THREE.WebGLRenderer({canvas:canvas, antialias:true, alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setClearColor(0,0);
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 100);
+  camera.position.z = 3.2;
+
+  var geo = new THREE.BufferGeometry();
+  var pos = new Float32Array(N*3), col = new Float32Array(N*3);
+  for (var i=0; i<N; i++) {
+    var th=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1), r=1+(Math.random()-.5)*.1;
+    var x=r*Math.sin(ph)*Math.cos(th), y=r*Math.sin(ph)*Math.sin(th), z=r*Math.cos(ph);
+    pos[i*3]=x; pos[i*3+1]=y; pos[i*3+2]=z;
+    origPos[i*3]=x; origPos[i*3+1]=y; origPos[i*3+2]=z;
+    var t=Math.random();
+    col[i*3]=.04+t*.08; col[i*3+1]=.5+t*.35; col[i*3+2]=.85-t*.35;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  geo.setAttribute('color',    new THREE.BufferAttribute(col,3));
+  var mat = new THREE.PointsMaterial({size:.022,vertexColors:true,transparent:true,opacity:.83,sizeAttenuation:true});
+  pts = new THREE.Points(geo,mat);
+  scene.add(pts);
+  window.addEventListener('resize', function(){
+    camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);
+  });
+  animOrb();
+}
+
+function animOrb() {
+  requestAnimationFrame(animOrb);
+  var t=clock3.getElapsedTime();
+  var pa=pts.geometry.attributes.position.array;
+  var sc;
+  if (orbState==='idle')      sc=1+Math.sin(t*.7)*.028;
+  else if (orbState==='listening') sc=1+Math.sin(t*3)*.055+orbVol*.1;
+  else                         sc=1+Math.sin(t*7)*.09 +orbVol*.22;
+  orbVol*=.88;
+  for (var i=0; i<N; i++) {
+    var n=Math.sin(t*.9+i*.05)*.007;
+    pa[i*3]  =origPos[i*3]  *sc+n*Math.cos(i);
+    pa[i*3+1]=origPos[i*3+1]*sc+n*Math.sin(i*.7);
+    pa[i*3+2]=origPos[i*3+2]*sc+n*Math.cos(i*1.4);
+  }
+  pts.geometry.attributes.position.needsUpdate=true;
+  pts.rotation.y=t*.17;
+  pts.rotation.x=Math.sin(t*.11)*.09;
+  renderer.render(scene,camera);
+}
+
+// ─── RINGTONE ─────────────────────────────────────────
+var rAC=null, rT=null;
+function playRing() {
+  try {
+    rAC=new(window.AudioContext||window.webkitAudioContext)();
+    var notes=[523,659,784,1047],ni=0;
+    function nt(){
+      if(!rAC)return;
+      var o=rAC.createOscillator(),g=rAC.createGain();
+      o.connect(g);g.connect(rAC.destination);
+      o.frequency.value=notes[ni%notes.length];ni++;o.type='sine';
+      g.gain.setValueAtTime(0,rAC.currentTime);
+      g.gain.linearRampToValueAtTime(.12,rAC.currentTime+.05);
+      g.gain.linearRampToValueAtTime(0,rAC.currentTime+.28);
+      o.start(rAC.currentTime);o.stop(rAC.currentTime+.3);
+      rT=setTimeout(nt,370);
+    }
+    nt();
+  } catch(e){log('ring err',e);}
+}
+function stopRing(){
+  clearTimeout(rT);
+  if(rAC){try{rAC.close();}catch(e){}rAC=null;}
+}
+
+// ─── CALL FLOW ────────────────────────────────────────
+document.getElementById('callBtn').addEventListener('click', function(){
+  unlockTTS();   // must happen inside user tap
+  startCall();
+});
+
+function startCall() {
+  document.getElementById('s0').classList.add('hidden');
+  var ov=document.getElementById('conn');
+  ov.style.display='flex';
+  playRing();
+
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false})
+    .then(function(s){ micStream=s; document.getElementById('camVid').srcObject=s; log('cam ok'); })
+    .catch(function(e){ log('cam err:',e.name); });
+
+  setTimeout(function(){
+    stopRing();
+    ov.classList.add('fo');
+    setTimeout(function(){
+      ov.style.display='none';
+      launchCall();
+    },550);
+  },1900);
+}
+
+function launchCall(){
+  document.getElementById('s1').classList.remove('hidden');
+  callActive=true; callStart=Date.now();
+  timerInt=setInterval(tickTimer,1000);
+  initThree();
+  log('call launched');
+  // First greeting — still close enough to user tap chain
+  setTimeout(function(){ speakAI("yo— what's up bro… can you hear me?"); },700);
+}
+
+function tickTimer(){
+  var e=Math.floor((Date.now()-callStart)/1000);
+  document.getElementById('timerEl').textContent=(Math.floor(e/60)<10?'0':'')+Math.floor(e/60)+':'+(e%60<10?'0':'')+(e%60);
+}
+
+// ─── SPEECH RECOGNITION (tap-to-speak model) ─────────
+var rec=null;
+
+function tapMic(){
+  if(!callActive||muted)return;
+  if(aiSpeaking){
+    // Interrupt
+    speechSynthesis.cancel();
+    aiSpeaking=false; orbState='idle';
+    setState('');
+    setLbl('speak');
+  }
+  if(recognizing){ stopRec(); return; }
+  startRec();
+}
+
+function startRec(){
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ log('no SpeechRecognition'); showSub('Speech recognition not supported'); return; }
+
+  rec=new SR();
+  rec.lang='en-US';
+  rec.continuous=false;
+  rec.interimResults=true;
+  rec.maxAlternatives=1;
+
+  rec.onstart=function(){
+    recognizing=true; orbState='listening';
+    document.getElementById('micBtn').classList.add('rec');
+    setLbl('listening…');
+    setState('🎤');
+    log('rec started');
+  };
+
+  rec.onresult=function(e){
+    var t='';
+    for(var i=e.resultIndex;i<e.results.length;i++) t+=e.results[i][0].transcript;
+    showSub('You: '+t, true);
+    if(e.results[e.results.length-1].isFinal){
+      log('final:',t);
+      clearSub(); doneRec();
+      if(t.trim()) handleSpeech(t.trim());
+    }
+  };
+
+  rec.onerror=function(e){
+    log('rec error:',e.error);
+    doneRec();
+    if(e.error==='not-allowed') showSub('Please allow microphone access in Safari Settings');
+    else if(e.error==='no-speech') showSub('Tap mic and speak');
+    else showSub('Mic error: '+e.error);
+  };
+
+  rec.onend=function(){ log('rec ended'); doneRec(); };
+
+  try{ rec.start(); log('rec.start() called'); }
+  catch(e){ log('rec.start() threw:',e.message); doneRec(); }
+}
+
+function stopRec(){ if(rec){ try{rec.stop();}catch(e){} } }
+function abortRec(){ if(rec){ try{rec.abort();}catch(e){}; rec=null; } }
+
+function doneRec(){
+  recognizing=false; orbState='idle';
+  abortRec();
+  document.getElementById('micBtn').classList.remove('rec');
+  setLbl(aiSpeaking?'interrupt':'speak');
+  setState('');
+}
+
+// ─── AI RESPONSE ──────────────────────────────────────
+async function handleSpeech(text){
+  if(!text||!callActive)return;
+  log('user:',text);
+  aiSpeaking=true; doneRec();
+  setState('thinking…'); setLbl('interrupt');
+  history.push({role:'user',content:text});
+
+  await sleep(350+Math.random()*650);
+  if(!callActive)return;
+
+  if(Math.random()<.1){
+    speakAI("wait— what?");
+    await sleep(1100);
+    if(!callActive)return;
+  }
+
+  try {
+    log('fetching Claude…');
+    var res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':API_KEY,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:100,
+        system:'You are Alex, a real teenager on a live FaceTime call with your friend. Speak extremely casually — messy, short, chaotic, authentic. Use words like bro, fr, lowkey, ngl, wait, like, lol, ugh, dude naturally. Interrupt yourself sometimes. MAX 1-2 sentences. Never sound formal or AI-like. React fast and real.',
+        messages:history
+      })
+    });
+
+    if(!res.ok){
+      var err=await res.text();
+      log('API',res.status,err.substring(0,200));
+      throw new Error('HTTP '+res.status);
+    }
+
+    var data=await res.json();
+    log('API response:',JSON.stringify(data).substring(0,200));
+    var reply=(data.content&&data.content[0])?data.content[0].text:'lol wait my wifi tripped';
+    history.push({role:'assistant',content:reply});
+    speakAI(reply);
+  } catch(e){
+    log('fetch err:',e.message);
+    speakAI("bro my connection is so trash rn— what'd you say?");
+  }
+}
+
+// ─── TTS ─────────────────────────────────────────────
+function speakAI(text){
+  if(!callActive)return;
+  log('speakAI:',text);
+  speechSynthesis.cancel();
+  aiSpeaking=true; orbState='speaking';
+  setState('Alex talking');
+  setLbl('interrupt');
+  showSub('Alex: '+text);
+
+  var chunks=chunkText(text), idx=0;
+
+  function next(){
+    if(!callActive||!aiSpeaking||idx>=chunks.length){ finish(); return; }
+    var chunk=chunks[idx++];
+    if(!chunk.trim()){ next(); return; }
+    var u=new SpeechSynthesisUtterance(chunk);
+    u.rate=.92+Math.random()*.18;
+    u.pitch=1+Math.random()*.12;
+    u.volume=1;
+    if(synthVoice) u.voice=synthVoice;
+    u.onstart=function(){ orbVol=.5; };
+    u.onboundary=function(){ orbVol=Math.max(orbVol,.35+Math.random()*.4); };
+    u.onend=function(){ setTimeout(next,60+Math.random()*90); };
+    u.onerror=function(e){ log('utt err:',e.error); setTimeout(next,60); };
+    speechSynthesis.speak(u);
+    log('spoke:',chunk);
+  }
+
+  function finish(){
+    aiSpeaking=false; orbState='idle'; orbVol=0;
+    setState(''); clearSub(); setLbl('speak');
+    log('TTS done');
+  }
+
+  next();
+}
+
+function chunkText(t){
+  var parts=t.split(/(?<=[.!?,…—–])\s+/);
+  var out=parts.filter(function(s){return s.trim();});
+  return out.length?out:[t];
+}
+
+// ─── CONTROLS ─────────────────────────────────────────
+function toggleMute(){
+  muted=!muted;
+  var btn=document.getElementById('muteBtn');
+  var ico=document.getElementById('muteIco');
+  if(muted){
+    btn.classList.add('on');
+    ico.innerHTML='<path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V20c0 .55.45 1 1 1s1-.45 1-1v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/>';
+    if(recognizing)stopRec();
+    document.getElementById('micBtn').classList.add('muted');
+    setLbl('muted');
+  } else {
+    btn.classList.remove('on');
+    ico.innerHTML='<path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/>';
+    document.getElementById('micBtn').classList.remove('muted');
+    setLbl('speak');
+  }
+}
+
+function endCall(){
+  callActive=false;
+  clearInterval(timerInt);
+  if(recognizing)abortRec();
+  speechSynthesis.cancel();
+  if(micStream)micStream.getTracks().forEach(function(t){t.stop();});
+  document.getElementById('endDur').textContent=document.getElementById('timerEl').textContent;
+  document.getElementById('end').classList.add('show');
+}
+
+// ─── UI HELPERS ───────────────────────────────────────
+var subTimer=null;
+function showSub(txt,interim){
+  var el=document.getElementById('subEl');
+  el.textContent=txt; el.classList.add('show');
+  if(!interim){ clearTimeout(subTimer); subTimer=setTimeout(clearSub,4500); }
+}
+function clearSub(){ document.getElementById('subEl').classList.remove('show'); }
+function setState(txt){ var el=document.getElementById('stEl'); el.textContent=txt; el.classList.toggle('show',!!txt); }
+function setLbl(txt){ document.getElementById('micLbl').textContent=txt; }
+function sleep(ms){ return new Promise(function(r){setTimeout(r,ms);}); }
+</script>
+
+</body>
+</html>
