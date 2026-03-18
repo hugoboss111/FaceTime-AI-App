@@ -118,11 +118,12 @@ box-shadow:0 0 60px rgba(10,132,255,.15);
 /* Debug log */
 #debug{
 position:absolute;top:max(env(safe-area-inset-top),16px);left:8px;
-font-size:10px;color:rgba(255,255,255,.4);z-index:30;
-max-width:200px;word-wrap:break-word;pointer-events:none;
-display:none;
+font-size:11px;color:rgba(255,255,255,.7);z-index:30;
+max-width:240px;word-wrap:break-word;pointer-events:none;
+background:rgba(0,0,0,.5);padding:4px 8px;border-radius:6px;
+display:block;
 }
-#debug.visible{display:block}
+#debug.hidden{display:none}
 </style>
 
 </head>
@@ -587,6 +588,9 @@ function handleUserInput(text) {
   sendToAI(text);
 }
 
+// Model to try — change this if your account doesn't have access
+var AI_MODEL = 'claude-sonnet-4-20250514';
+
 function sendToAI(userText) {
   state.conversationHistory.push({ role: 'user', content: userText });
   if (state.conversationHistory.length > 20) {
@@ -594,6 +598,17 @@ function sendToAI(userText) {
   }
 
   callStatus.textContent = '…';
+  transcriptText.textContent = 'thinking…';
+  transcriptText.style.opacity = '0.5';
+
+  var reqBody = {
+    model: AI_MODEL,
+    max_tokens: 200,
+    system: "You are a real person on a live phone call. Speak casually, messy, short, slightly chaotic, like a teenager. Use filler words (like, uh, bro, wait, nah, yo, man, lowkey). Keep responses 1-2 sentences max. Sometimes trail off with ... or interrupt yourself with dashes. Never use asterisks or emojis or stage directions. Never describe actions. Just talk like a real person would on a call. React to what they say, ask follow-ups, joke around. Be natural.",
+    messages: state.conversationHistory
+  };
+
+  log('Sending to API… model=' + AI_MODEL);
 
   fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -603,16 +618,26 @@ function sendToAI(userText) {
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true'
     },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 200,
-      system: "You are a real person on a live phone call. Speak casually, messy, short, slightly chaotic, like a teenager. Use filler words (like, uh, bro, wait, nah, yo, man, lowkey). Keep responses 1-2 sentences max. Sometimes trail off with ... or interrupt yourself with dashes. Never use asterisks or emojis or stage directions. Never describe actions. Just talk like a real person would on a call. React to what they say, ask follow-ups, joke around. Be natural.",
-      messages: state.conversationHistory
-    })
+    body: JSON.stringify(reqBody)
   })
-  .then(function(res) { return res.json(); })
+  .then(function(res) {
+    log('API status: ' + res.status);
+    return res.json();
+  })
   .then(function(data) {
     if (!state.inCall) return;
+
+    // Check for errors and SHOW THEM
+    if (data.error) {
+      var errMsg = data.error.message || JSON.stringify(data.error);
+      log('API ERROR: ' + errMsg);
+      // Show error visibly on screen
+      transcriptText.textContent = '⚠️ API Error: ' + errMsg;
+      transcriptText.style.opacity = '1';
+      callStatus.textContent = 'API Error';
+      speakText("sorry, there's an error with the connection", onAIDone);
+      return;
+    }
 
     var reply = '';
     if (data.content) {
@@ -620,15 +645,14 @@ function sendToAI(userText) {
         if (data.content[i].type === 'text') reply += data.content[i].text;
       }
     }
-    if (data.error) {
-      log('API error: ' + (data.error.message || JSON.stringify(data.error)));
-      reply = "yo wait, something glitched on my end, say that again?";
+    if (!reply) {
+      log('Empty reply, raw: ' + JSON.stringify(data).substring(0, 200));
+      reply = "bro what? say that again i didn't catch it";
     }
-    if (!reply) reply = "bro what? say that again i didn't catch it";
 
     state.conversationHistory.push({ role: 'assistant', content: reply });
     callStatus.textContent = formatTimer(state.timerSeconds);
-    log('AI: ' + reply.substring(0, 40));
+    log('AI: ' + reply.substring(0, 60));
 
     // Human-like delay
     var delay = 400 + Math.random() * 800;
@@ -650,9 +674,11 @@ function sendToAI(userText) {
     }
   })
   .catch(function(err) {
-    log('Fetch error: ' + err.message);
-    callStatus.textContent = formatTimer(state.timerSeconds);
-    speakText("yo my bad, i think we're breaking up or something", onAIDone);
+    log('FETCH FAILED: ' + err.message);
+    transcriptText.textContent = '⚠️ Network error: ' + err.message;
+    transcriptText.style.opacity = '1';
+    callStatus.textContent = 'Connection Error';
+    speakText("yo my bad, i can't connect right now", onAIDone);
   });
 }
 
@@ -826,7 +852,7 @@ document.addEventListener('click', function(e) {
   if (e.clientX < 80 && e.clientY < 80) {
     debugTaps++;
     if (debugTaps >= 3) {
-      debugEl.classList.toggle('visible');
+      debugEl.classList.toggle('hidden');
       debugTaps = 0;
     }
     setTimeout(function() { debugTaps = 0; }, 1500);
